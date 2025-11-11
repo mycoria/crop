@@ -7,18 +7,22 @@ import (
 	"fmt"
 )
 
+// KeyPairType identifies a signing/verification key pair algorithm.
 type KeyPairType string
 
 const (
+	// KeyPairTypeEd25519 is the Ed25519 signature scheme.
 	KeyPairTypeEd25519 KeyPairType = "Ed25519"
 )
 
+// AllKeyPairTypes returns all supported key pair types.
 func AllKeyPairTypes() []KeyPairType {
 	return []KeyPairType{
 		KeyPairTypeEd25519,
 	}
 }
 
+// IsValid returns whether this key pair type is supported.
 func (kpt KeyPairType) IsValid() bool {
 	switch kpt {
 	case KeyPairTypeEd25519:
@@ -27,20 +31,30 @@ func (kpt KeyPairType) IsValid() bool {
 	return false
 }
 
+// KeyPair represents a public/private key pair for signing and verification.
 type KeyPair interface {
+	// Type returns the key pair algorithm type.
 	Type() KeyPairType
+	// PublicKey returns the public key.
 	PublicKey() crypto.PublicKey
 
+	// HasPrivate returns true if this key pair includes a private key.
 	HasPrivate() bool
+	// ToPublic returns a copy containing only the public key.
 	ToPublic() KeyPair
 
+	// Sign creates a signature over the data using the private key.
 	Sign(data []byte) (sig []byte, err error)
+	// Verify checks that the signature is valid for the data.
 	Verify(data, sig []byte) error
 
+	// Export serializes the key pair to a StoredKey.
 	Export() (*StoredKey, error)
+	// Burn securely erases key material from memory.
 	Burn()
 }
 
+// NewKeyPair generates a new key pair of the specified type.
 func NewKeyPair(kpType KeyPairType) (KeyPair, error) {
 	return kpType.New()
 }
@@ -70,6 +84,7 @@ func (kpt KeyPairType) String() string {
 	return string(kpt)
 }
 
+// LoadKeyPair loads a key pair from a StoredKey.
 func LoadKeyPair(stored *StoredKey) (KeyPair, error) {
 	// Get and check key type.
 	kpType, ok := FindStoredKeyType(stored, []KeyPairType{
@@ -96,11 +111,13 @@ func LoadKeyPair(stored *StoredKey) (KeyPair, error) {
 	}
 }
 
+// Ed25519KeyPair implements the KeyPair interface for Ed25519 signatures.
 type Ed25519KeyPair struct {
 	pubKey  ed25519.PublicKey
 	privKey ed25519.PrivateKey
 }
 
+// MakeEd25519KeyPair creates an Ed25519KeyPair from existing key material.
 func MakeEd25519KeyPair(privKey ed25519.PrivateKey, pubKey ed25519.PublicKey) *Ed25519KeyPair {
 	if len(pubKey) == 0 && len(privKey) != 0 {
 		pubKey = privKey.Public().(ed25519.PublicKey)
@@ -143,10 +160,12 @@ func (edkp *Ed25519KeyPair) Verify(data, sig []byte) error {
 	return ed25519.VerifyWithOptions(edkp.pubKey, data, sig, &ed25519.Options{})
 }
 
+// PublicKeyData returns the raw public key bytes.
 func (edkp *Ed25519KeyPair) PublicKeyData() []byte {
 	return edkp.pubKey
 }
 
+// PrivateKeyData returns the raw private key bytes.
 func (edkp *Ed25519KeyPair) PrivateKeyData() []byte {
 	return edkp.privKey
 }

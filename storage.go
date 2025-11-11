@@ -23,11 +23,11 @@ func (sk *StoredKey) IsType(expected string) bool {
 }
 
 // FindStoredKeyType finds the type of the given stored key using the given
-// acceptable types, using case insensitive matching
+// acceptable types, using case insensitive matching.
 func FindStoredKeyType[T ~string](sk *StoredKey, acceptable []T) (found T, ok bool) {
 	for _, entry := range acceptable {
 		if strings.EqualFold(sk.Type, string(entry)) {
-			return T(sk.Type), true
+			return entry, true
 		}
 	}
 	var zero T

@@ -6,7 +6,7 @@ const minSecretLength = 32 // 256 bits
 
 // NewSecret returns a new random secret with the given length (minimum 32 bytes).
 func NewSecret(length int) []byte {
-	// Enfore minimum of 32 bytes.
+	// Enforce minimum of 32 bytes.
 	if length < minSecretLength {
 		length = minSecretLength
 	}

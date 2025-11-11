@@ -124,17 +124,20 @@ func (h Hash) Verify(data, checksum []byte) error {
 	return nil
 }
 
+// NewValueHasher creates a structured hasher for multiple values.
 func NewValueHasher(hash Hash) *ValueHasher {
 	return &ValueHasher{
 		hasher: hash.New(),
 	}
 }
 
+// ValueHasher hashes structured data with field separation.
 type ValueHasher struct {
 	hasher   hash.Hash
 	fieldCnt uint64
 }
 
+// Add hashes a byte slice field.
 func (vh *ValueHasher) Add(data []byte) {
 	vh.fieldCnt++
 
@@ -168,10 +171,12 @@ func (vh *ValueHasher) Add(data []byte) {
 	}
 }
 
+// AddString hashes a string field.
 func (vh *ValueHasher) AddString(data string) {
 	vh.Add([]byte(data))
 }
 
+// Sum finalizes and returns the hash result.
 func (vh *ValueHasher) Sum() []byte {
 	// Write finisher.
 	finisher := [16]byte{

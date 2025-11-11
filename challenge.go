@@ -5,12 +5,15 @@ import (
 	"fmt"
 )
 
+// ChallengeType identifies a challenge-response authentication algorithm.
 type ChallengeType string
 
 const (
+	// ChallengeTypeContextHashBl3 uses context-bound hashing with BLAKE3.
 	ChallengeTypeContextHashBl3 ChallengeType = "context-hash-bl3"
 )
 
+// IsValid returns whether this challenge type is supported.
 func (ct ChallengeType) IsValid() bool {
 	switch ct {
 	case ChallengeTypeContextHashBl3:
@@ -19,6 +22,7 @@ func (ct ChallengeType) IsValid() bool {
 	return false
 }
 
+// NewChallenge creates a new challenge for authentication.
 func NewChallenge(ct ChallengeType, purpose, requesterContext, responderContext string) (Challenge, error) {
 	return ct.New(purpose, requesterContext, responderContext)
 }
@@ -49,13 +53,19 @@ func (ct ChallengeType) String() string {
 	return string(ct)
 }
 
+// Challenge implements challenge-response authentication between peers.
 type Challenge interface {
+	// Type returns the challenge algorithm type.
 	Type() ChallengeType
+	// GetChallenge returns the challenge bytes to send.
 	GetChallenge() []byte
+	// CheckResponse verifies a response to the challenge.
 	CheckResponse(data []byte) error
+	// MakeResponse generates a response to a received challenge.
 	MakeResponse(challenge []byte) (response []byte, err error)
 }
 
+// HashedContextChallenge implements Challenge using context-bound hashing.
 type HashedContextChallenge struct {
 	challengeType    ChallengeType
 	hash             Hash

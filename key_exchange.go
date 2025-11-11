@@ -6,12 +6,15 @@ import (
 	"fmt"
 )
 
+// KeyExchangeType identifies a key exchange algorithm.
 type KeyExchangeType string
 
 const (
+	// KeyExchangeTypeX25519 is the X25519 Diffie-Hellman key exchange.
 	KeyExchangeTypeX25519 KeyExchangeType = "X25519"
 )
 
+// IsValid returns whether this key exchange type is supported.
 func (kmt KeyExchangeType) IsValid() bool {
 	switch kmt {
 	case KeyExchangeTypeX25519:
@@ -20,13 +23,14 @@ func (kmt KeyExchangeType) IsValid() bool {
 	return false
 }
 
+// NewKeyExchange creates a new key exchange instance of the specified type.
 func NewKeyExchange(kmt KeyExchangeType) (KeyExchange, error) {
 	return kmt.New()
 }
 
 func (kmt KeyExchangeType) New() (KeyExchange, error) {
 	if !kmt.IsValid() {
-		return nil, fmt.Errorf("invalid key maker type: %q", kmt)
+		return nil, fmt.Errorf("invalid key exchange type: %q", kmt)
 	}
 
 	switch kmt {
@@ -40,7 +44,7 @@ func (kmt KeyExchangeType) New() (KeyExchange, error) {
 		}, nil
 
 	default:
-		return nil, fmt.Errorf("key maker type %s not yet implemented", kmt)
+		return nil, fmt.Errorf("key exchange type %s not yet implemented", kmt)
 	}
 }
 
@@ -48,16 +52,22 @@ func (kxt KeyExchangeType) String() string {
 	return string(kxt)
 }
 
+// KeyExchange performs key agreement between two parties.
 type KeyExchange interface {
+	// Type returns the key exchange algorithm type.
 	Type() KeyExchangeType
+	// ExchangeMsg returns the public key to send to the peer.
 	ExchangeMsg() ([]byte, error)
+	// MakeKeys derives shared keys from the peer's public key.
 	MakeKeys(exchMsg []byte, keyMakerType KeyMakerType) (KeyMaker, error)
+	// Burn securely erases key material from memory.
 	Burn()
 }
 
+// X25519KeyExchange implements KeyExchange using X25519.
 type X25519KeyExchange struct {
 	privKey *ecdh.PrivateKey
-	used    bool
+	used    bool // Prevents key reuse for security
 }
 
 func (xke *X25519KeyExchange) Type() KeyExchangeType {
