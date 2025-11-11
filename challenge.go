@@ -32,6 +32,7 @@ func (ct ChallengeType) New(purpose, requesterContext, responderContext string) 
 	switch ct {
 	case ChallengeTypeContextHashBl3:
 		return &HashedContextChallenge{
+			challengeType:    ChallengeTypeContextHashBl3,
 			hash:             BLAKE3,
 			challengeData:    NewSecret(32),
 			purpose:          purpose,
@@ -44,18 +45,28 @@ func (ct ChallengeType) New(purpose, requesterContext, responderContext string) 
 	}
 }
 
+func (ct ChallengeType) String() string {
+	return string(ct)
+}
+
 type Challenge interface {
+	Type() ChallengeType
 	GetChallenge() []byte
 	CheckResponse(data []byte) error
 	MakeResponse(challenge []byte) (response []byte, err error)
 }
 
 type HashedContextChallenge struct {
+	challengeType    ChallengeType
 	hash             Hash
 	challengeData    []byte
 	purpose          string
 	requesterContext string
 	responderContext string
+}
+
+func (hcc *HashedContextChallenge) Type() ChallengeType {
+	return hcc.challengeType
 }
 
 func (hcc *HashedContextChallenge) GetChallenge() []byte {

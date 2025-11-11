@@ -44,9 +44,14 @@ func (kmt KeyMakerType) New(keyMaterial []byte) (KeyMaker, error) {
 	}
 }
 
+func (kmt KeyMakerType) String() string {
+	return string(kmt)
+}
+
 type KeyMaker interface {
 	Type() KeyMakerType
-	DeriveKey(keyContext, keyParty string, dst []byte) error
+	DeriveKey(keyContext, keyParty string, keyLength int) ([]byte, error)
+	DeriveKeyInto(keyContext, keyParty string, dst []byte) error
 	Burn()
 }
 
@@ -58,7 +63,12 @@ func (b3km *Blake3Keymaker) Type() KeyMakerType {
 	return KeyMakerTypeBlake3
 }
 
-func (b3km *Blake3Keymaker) DeriveKey(keyContext, keyParty string, dst []byte) error {
+func (b3km *Blake3Keymaker) DeriveKey(keyContext, keyParty string, keyLength int) ([]byte, error) {
+	dst := make([]byte, keyLength)
+	return dst, b3km.DeriveKeyInto(keyContext, keyParty, dst)
+}
+
+func (b3km *Blake3Keymaker) DeriveKeyInto(keyContext, keyParty string, dst []byte) error {
 	if len(dst) < keyMakerMinKeySize {
 		return ErrRequestedKeyLengthTooSmall
 	}

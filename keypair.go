@@ -66,6 +66,10 @@ func (kpType KeyPairType) New() (KeyPair, error) {
 	}
 }
 
+func (kpt KeyPairType) String() string {
+	return string(kpt)
+}
+
 func LoadKeyPair(stored *StoredKey) (KeyPair, error) {
 	// Get and check key type.
 	kpType, ok := FindStoredKeyType(stored, []KeyPairType{
@@ -95,6 +99,16 @@ func LoadKeyPair(stored *StoredKey) (KeyPair, error) {
 type Ed25519KeyPair struct {
 	pubKey  ed25519.PublicKey
 	privKey ed25519.PrivateKey
+}
+
+func MakeEd25519KeyPair(privKey ed25519.PrivateKey, pubKey ed25519.PublicKey) *Ed25519KeyPair {
+	if len(pubKey) == 0 && len(privKey) != 0 {
+		pubKey = privKey.Public().(ed25519.PublicKey)
+	}
+	return &Ed25519KeyPair{
+		pubKey:  pubKey,
+		privKey: privKey,
+	}
 }
 
 func (edkp *Ed25519KeyPair) Type() KeyPairType {

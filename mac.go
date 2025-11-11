@@ -8,12 +8,15 @@ import (
 	"fmt"
 	"hash"
 	"sync"
+
+	"github.com/zeebo/blake3"
 )
 
 type MsgAuthCodeType string
 
 const (
 	MsgAuthCodeTypeHMACBlake3 MsgAuthCodeType = "HMAC-BLAKE3"
+	MsgAuthCodeTypeBlake3     MsgAuthCodeType = "BLAKE3"
 
 	macMinSaltSize = 8
 	macSaltSize    = 16
@@ -36,19 +39,39 @@ func (act MsgAuthCodeType) New(signKey, verifyKey []byte, seqChecker SequenceChe
 		return nil, fmt.Errorf("invalid auth code type: %q", act)
 	}
 
-	// Get HMAC-based auth code.
+	// Create handler based on type.
 	switch act {
 	case MsgAuthCodeTypeHMACBlake3:
-		return &HMAC{
+		return &HashBasedMAC{
 			handlerType: MsgAuthCodeTypeHMACBlake3,
 			seqChecker:  seqChecker,
 			signer:      hmac.New(BLAKE3.New, signKey),
 			verifier:    hmac.New(BLAKE3.New, verifyKey),
 		}, nil
 
+	case MsgAuthCodeTypeBlake3:
+		signer, err := blake3.NewKeyed(signKey)
+		if err != nil {
+			return nil, err
+		}
+		verifier, err := blake3.NewKeyed(verifyKey)
+		if err != nil {
+			return nil, err
+		}
+		return &HashBasedMAC{
+			handlerType: MsgAuthCodeTypeBlake3,
+			seqChecker:  seqChecker,
+			signer:      signer,
+			verifier:    verifier,
+		}, nil
+
 	default:
 		return nil, fmt.Errorf("auth code type %s not yet implemented", act)
 	}
+}
+
+func (act MsgAuthCodeType) String() string {
+	return string(act)
 }
 
 type MsgAuthCodeHandler interface {
@@ -58,7 +81,7 @@ type MsgAuthCodeHandler interface {
 	Burn()
 }
 
-type HMAC struct {
+type HashBasedMAC struct {
 	handlerType MsgAuthCodeType
 	seqChecker  SequenceChecker
 
@@ -69,20 +92,20 @@ type HMAC struct {
 	verifyLock sync.Mutex
 }
 
-func (hmac *HMAC) Type() MsgAuthCodeType {
-	return hmac.handlerType
+func (hbm *HashBasedMAC) Type() MsgAuthCodeType {
+	return MsgAuthCodeTypeBlake3
 }
 
-func (hmac *HMAC) Sign(data []byte) (mac []byte) {
-	hmac.signLock.Lock()
-	defer hmac.signLock.Unlock()
-	defer hmac.signer.Reset()
+func (hbm *HashBasedMAC) Sign(data []byte) (mac []byte) {
+	hbm.signLock.Lock()
+	defer hbm.signLock.Unlock()
+	defer hbm.signer.Reset()
 
 	// Create slice for the new MAC.
-	mac = make([]byte, 9+macSaltSize+hmac.signer.Size())
+	mac = make([]byte, 9+macSaltSize+hbm.signer.Size())
 
 	// Increment and add serial.
-	sequence := hmac.seqChecker.NextOutSequence()
+	sequence := hbm.seqChecker.NextOutSequence()
 	size := binary.PutUvarint(mac, sequence)
 
 	// Get random salt.
@@ -90,19 +113,19 @@ func (hmac *HMAC) Sign(data []byte) (mac []byte) {
 	size += macSaltSize
 
 	// Generate checksum.
-	hmac.signer.Write(mac[:size])
-	hmac.signer.Write(data)
-	copy(mac[size:], hmac.signer.Sum(nil))
-	size += hmac.signer.Size()
+	hbm.signer.Write(mac[:size])
+	hbm.signer.Write(data)
+	copy(mac[size:], hbm.signer.Sum(nil))
+	size += hbm.signer.Size()
 
 	// Return full MAC without extra bytes.
 	return mac[:size]
 }
 
-func (hmac *HMAC) Verify(data []byte, mac []byte) error {
-	hmac.verifyLock.Lock()
-	defer hmac.verifyLock.Unlock()
-	defer hmac.verifier.Reset()
+func (hbm *HashBasedMAC) Verify(data []byte, mac []byte) error {
+	hbm.verifyLock.Lock()
+	defer hbm.verifyLock.Unlock()
+	defer hbm.verifier.Reset()
 
 	// Extract sequence. Note: Check _after_ signature!
 	seqNum, seqSize := binary.Uvarint(mac)
@@ -111,15 +134,15 @@ func (hmac *HMAC) Verify(data []byte, mac []byte) error {
 	}
 
 	// Check salt size.
-	saltSize := len(mac) - seqSize - hmac.verifier.Size()
+	saltSize := len(mac) - seqSize - hbm.verifier.Size()
 	if saltSize < macMinSaltSize {
 		return fmt.Errorf("%w: too short", ErrAuthCodeInvalid)
 	}
 
 	// Generate checksum.
-	hmac.verifier.Write(mac[:seqSize+saltSize])
-	hmac.verifier.Write(data)
-	compareChecksum := hmac.verifier.Sum(nil)
+	hbm.verifier.Write(mac[:seqSize+saltSize])
+	hbm.verifier.Write(data)
+	compareChecksum := hbm.verifier.Sum(nil)
 
 	// Compare checksum.
 	if subtle.ConstantTimeCompare(mac[seqSize+saltSize:], compareChecksum) != 1 {
@@ -127,13 +150,13 @@ func (hmac *HMAC) Verify(data []byte, mac []byte) error {
 	}
 
 	// Check sequence number.
-	if !hmac.seqChecker.CheckInSequence(seqNum) {
+	if !hbm.seqChecker.CheckInSequence(seqNum) {
 		return fmt.Errorf("%w: sequence violation", ErrAuthCodeInvalid)
 	}
 
 	return nil
 }
 
-func (hmac *HMAC) Burn() {
-	// TODO: Any way we can burn the HMAC constructs?
+func (hbm *HashBasedMAC) Burn() {
+	// TODO: Any way we can burn the hash constructs?
 }

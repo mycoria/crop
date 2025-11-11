@@ -23,7 +23,7 @@ func TestKeyExchangeType_IsValid(t *testing.T) {
 func TestNewKeyExchange_InvalidType(t *testing.T) {
 	t.Parallel()
 
-	ke, err := NewKeyExchange(KeyExchangeType("invalid"), nil)
+	ke, err := NewKeyExchange(KeyExchangeType("invalid"))
 	if err == nil {
 		t.Fatalf("expected error for invalid key exchange type")
 	}
@@ -35,7 +35,7 @@ func TestNewKeyExchange_InvalidType(t *testing.T) {
 func TestNewKeyExchange_X25519_CreatesUsable(t *testing.T) {
 	t.Parallel()
 
-	ke, err := NewKeyExchange(KeyExchangeTypeX25519, nil)
+	ke, err := NewKeyExchange(KeyExchangeTypeX25519)
 	if err != nil {
 		t.Fatalf("NewKeyExchange(X25519) error: %v", err)
 	}
@@ -63,11 +63,11 @@ func TestX25519_ECDHSharedSecret_MatchBetweenPeers(t *testing.T) {
 	t.Parallel()
 
 	// Create two peers
-	aliceKE, err := NewKeyExchange(KeyExchangeTypeX25519, nil)
+	aliceKE, err := NewKeyExchange(KeyExchangeTypeX25519)
 	if err != nil {
 		t.Fatalf("alice NewKeyExchange error: %v", err)
 	}
-	bobKE, err := NewKeyExchange(KeyExchangeTypeX25519, nil)
+	bobKE, err := NewKeyExchange(KeyExchangeTypeX25519)
 	if err != nil {
 		t.Fatalf("bob NewKeyExchange error: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestX25519_ECDHSharedSecret_MatchBetweenPeers(t *testing.T) {
 func TestX25519_MakeKeys_ErrOnInvalidRemotePubKey(t *testing.T) {
 	t.Parallel()
 
-	ke, err := NewKeyExchange(KeyExchangeTypeX25519, nil)
+	ke, err := NewKeyExchange(KeyExchangeTypeX25519)
 	if err != nil {
 		t.Fatalf("NewKeyExchange error: %v", err)
 	}
@@ -129,7 +129,7 @@ func TestX25519_MakeKeys_ErrCannotReuse(t *testing.T) {
 	t.Parallel()
 
 	// Create an instance and force it into a "used" state.
-	ke, err := NewKeyExchange(KeyExchangeTypeX25519, nil)
+	ke, err := NewKeyExchange(KeyExchangeTypeX25519)
 	if err != nil {
 		t.Fatalf("NewKeyExchange error: %v", err)
 	}
@@ -149,7 +149,7 @@ func TestX25519_MakeKeys_ErrCannotReuse(t *testing.T) {
 func TestX25519_TypeAndBurn_NoPanic(t *testing.T) {
 	t.Parallel()
 
-	ke, err := NewKeyExchange(KeyExchangeTypeX25519, nil)
+	ke, err := NewKeyExchange(KeyExchangeTypeX25519)
 	if err != nil {
 		t.Fatalf("NewKeyExchange error: %v", err)
 	}

@@ -50,12 +50,12 @@ func TestNewKeyMaker_Blake3_CreatesUsableAndType(t *testing.T) {
 
 	// Derive a minimal-length key
 	dst := make([]byte, keyMakerMinKeySize)
-	if err := km.DeriveKey("ctx", "party", dst); err != nil {
-		t.Fatalf("DeriveKey error: %v", err)
+	if err := km.DeriveKeyInto("ctx", "party", dst); err != nil {
+		t.Fatalf("DeriveKeyInto error: %v", err)
 	}
 }
 
-func TestBlake3Keymaker_DeriveKey_MinLength(t *testing.T) {
+func TestBlake3Keymaker_DeriveKeyInto_MinLength(t *testing.T) {
 	t.Parallel()
 
 	km, err := NewKeyMaker(KeyMakerTypeBlake3, []byte("material"))
@@ -69,7 +69,7 @@ func TestBlake3Keymaker_DeriveKey_MinLength(t *testing.T) {
 		make([]byte, keyMakerMinKeySize-1),
 	}
 	for _, dst := range shorts {
-		if err := km.DeriveKey("", "", dst); err == nil {
+		if err := km.DeriveKeyInto("", "", dst); err == nil {
 			t.Fatalf("expected error for len(dst)=%d < %d", len(dst), keyMakerMinKeySize)
 		} else if !errors.Is(err, ErrRequestedKeyLengthTooSmall) {
 			t.Fatalf("expected ErrRequestedKeyLengthTooSmall, got %v", err)
@@ -78,12 +78,12 @@ func TestBlake3Keymaker_DeriveKey_MinLength(t *testing.T) {
 
 	// Exactly min should succeed
 	min := make([]byte, keyMakerMinKeySize)
-	if err := km.DeriveKey("", "", min); err != nil {
-		t.Fatalf("DeriveKey(min) error: %v", err)
+	if err := km.DeriveKeyInto("", "", min); err != nil {
+		t.Fatalf("DeriveKeyInto(min) error: %v", err)
 	}
 }
 
-func TestBlake3Keymaker_DeriveKey_DeterministicAndDomainSeparated(t *testing.T) {
+func TestBlake3Keymaker_DeriveKeyInto_DeterministicAndDomainSeparated(t *testing.T) {
 	t.Parallel()
 
 	material := []byte("fixed key material")
@@ -102,11 +102,11 @@ func TestBlake3Keymaker_DeriveKey_DeterministicAndDomainSeparated(t *testing.T) 
 	// Deterministic: same material, context, party, length
 	dst1 := make([]byte, 32)
 	dst2 := make([]byte, 32)
-	if err := km1.DeriveKey(ctx, party, dst1); err != nil {
-		t.Fatalf("km1.DeriveKey error: %v", err)
+	if err := km1.DeriveKeyInto(ctx, party, dst1); err != nil {
+		t.Fatalf("km1.DeriveKeyInto error: %v", err)
 	}
-	if err := km2.DeriveKey(ctx, party, dst2); err != nil {
-		t.Fatalf("km2.DeriveKey error: %v", err)
+	if err := km2.DeriveKeyInto(ctx, party, dst2); err != nil {
+		t.Fatalf("km2.DeriveKeyInto error: %v", err)
 	}
 	if !bytes.Equal(dst1, dst2) {
 		t.Fatalf("determinism failed: km1 != km2\nkm1: %x\nkm2: %x", dst1, dst2)
@@ -114,8 +114,8 @@ func TestBlake3Keymaker_DeriveKey_DeterministicAndDomainSeparated(t *testing.T) 
 
 	// Domain separation: changing ctx changes output
 	dstCtx := make([]byte, 32)
-	if err := km1.DeriveKey(ctx+"-2", party, dstCtx); err != nil {
-		t.Fatalf("DeriveKey(ctx2) error: %v", err)
+	if err := km1.DeriveKeyInto(ctx+"-2", party, dstCtx); err != nil {
+		t.Fatalf("DeriveKeyInto(ctx2) error: %v", err)
 	}
 	if bytes.Equal(dst1, dstCtx) {
 		t.Fatalf("expected different keys when context changes")
@@ -123,15 +123,15 @@ func TestBlake3Keymaker_DeriveKey_DeterministicAndDomainSeparated(t *testing.T) 
 
 	// Domain separation: changing party changes output
 	dstParty := make([]byte, 32)
-	if err := km1.DeriveKey(ctx, party+"-2", dstParty); err != nil {
-		t.Fatalf("DeriveKey(party2) error: %v", err)
+	if err := km1.DeriveKeyInto(ctx, party+"-2", dstParty); err != nil {
+		t.Fatalf("DeriveKeyInto(party2) error: %v", err)
 	}
 	if bytes.Equal(dst1, dstParty) {
 		t.Fatalf("expected different keys when party changes")
 	}
 }
 
-func TestBlake3Keymaker_DeriveKey_MatchesReference(t *testing.T) {
+func TestBlake3Keymaker_DeriveKeyInto_MatchesReference(t *testing.T) {
 	t.Parallel()
 
 	material := []byte("ref material")
@@ -145,8 +145,8 @@ func TestBlake3Keymaker_DeriveKey_MatchesReference(t *testing.T) {
 	}
 
 	dst := make([]byte, 64)
-	if err := km.DeriveKey(ctx, party, dst); err != nil {
-		t.Fatalf("DeriveKey error: %v", err)
+	if err := km.DeriveKeyInto(ctx, party, dst); err != nil {
+		t.Fatalf("DeriveKeyInto error: %v", err)
 	}
 
 	// Reference using the blake3 package directly
@@ -158,7 +158,7 @@ func TestBlake3Keymaker_DeriveKey_MatchesReference(t *testing.T) {
 	}
 }
 
-func TestBlake3Keymaker_DeriveKey_VariousLengths(t *testing.T) {
+func TestBlake3Keymaker_DeriveKeyInto_VariousLengths(t *testing.T) {
 	t.Parallel()
 
 	km, err := NewKeyMaker(KeyMakerTypeBlake3, []byte("material X"))
@@ -170,8 +170,8 @@ func TestBlake3Keymaker_DeriveKey_VariousLengths(t *testing.T) {
 	prev := make([][]byte, len(lengths))
 	for i, n := range lengths {
 		dst := make([]byte, n)
-		if err := km.DeriveKey("kdf", "party", dst); err != nil {
-			t.Fatalf("DeriveKey len=%d error: %v", n, err)
+		if err := km.DeriveKeyInto("kdf", "party", dst); err != nil {
+			t.Fatalf("DeriveKeyInto len=%d error: %v", n, err)
 		}
 		// Save a copy for uniqueness checks
 		prev[i] = append([]byte(nil), dst...)

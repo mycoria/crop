@@ -92,6 +92,10 @@ func (h Hash) New() hash.Hash {
 	}
 }
 
+func (h Hash) String() string {
+	return string(h)
+}
+
 // IsValid returns whether the hash is known.
 func (h Hash) IsValid() bool {
 	return h.New() != nil

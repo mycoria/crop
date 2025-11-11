@@ -20,11 +20,11 @@ func (kmt KeyExchangeType) IsValid() bool {
 	return false
 }
 
-func NewKeyExchange(kmt KeyExchangeType, key []byte) (KeyExchange, error) {
-	return kmt.New(key)
+func NewKeyExchange(kmt KeyExchangeType) (KeyExchange, error) {
+	return kmt.New()
 }
 
-func (kmt KeyExchangeType) New(keyMaterial []byte) (KeyExchange, error) {
+func (kmt KeyExchangeType) New() (KeyExchange, error) {
 	if !kmt.IsValid() {
 		return nil, fmt.Errorf("invalid key maker type: %q", kmt)
 	}
@@ -42,6 +42,10 @@ func (kmt KeyExchangeType) New(keyMaterial []byte) (KeyExchange, error) {
 	default:
 		return nil, fmt.Errorf("key maker type %s not yet implemented", kmt)
 	}
+}
+
+func (kxt KeyExchangeType) String() string {
+	return string(kxt)
 }
 
 type KeyExchange interface {
