@@ -12,16 +12,20 @@ import (
 	"github.com/zeebo/blake3"
 )
 
+// MsgAuthCodeType identifies a message authentication code algorithm.
 type MsgAuthCodeType string
 
 const (
+	// MsgAuthCodeTypeHMACBlake3 uses HMAC with BLAKE3.
 	MsgAuthCodeTypeHMACBlake3 MsgAuthCodeType = "HMAC-BLAKE3"
-	MsgAuthCodeTypeBlake3     MsgAuthCodeType = "BLAKE3"
+	// MsgAuthCodeTypeBlake3 uses keyed BLAKE3.
+	MsgAuthCodeTypeBlake3 MsgAuthCodeType = "BLAKE3"
 
 	macMinSaltSize = 8
 	macSaltSize    = 16
 )
 
+// IsValid returns whether this MAC type is supported.
 func (act MsgAuthCodeType) IsValid() bool {
 	switch act {
 	case MsgAuthCodeTypeHMACBlake3:
@@ -30,6 +34,7 @@ func (act MsgAuthCodeType) IsValid() bool {
 	return false
 }
 
+// NewAuthCodeHandler creates a new MAC handler with separate keys for signing and verification.
 func NewAuthCodeHandler(act MsgAuthCodeType, signKey, verifyKey []byte, seqChecker SequenceChecker) (MsgAuthCodeHandler, error) {
 	return act.New(signKey, verifyKey, seqChecker)
 }
@@ -74,13 +79,19 @@ func (act MsgAuthCodeType) String() string {
 	return string(act)
 }
 
+// MsgAuthCodeHandler generates and verifies message authentication codes.
 type MsgAuthCodeHandler interface {
+	// Type returns the MAC algorithm type.
 	Type() MsgAuthCodeType
+	// Sign generates an authentication code for the data.
 	Sign(data []byte) (mac []byte)
+	// Verify checks that the MAC is valid for the data.
 	Verify(data []byte, mac []byte) error
+	// Burn securely erases key material from memory.
 	Burn()
 }
 
+// HashBasedMAC implements MsgAuthCodeHandler using hash-based MACs.
 type HashBasedMAC struct {
 	handlerType MsgAuthCodeType
 	seqChecker  SequenceChecker
@@ -93,7 +104,7 @@ type HashBasedMAC struct {
 }
 
 func (hbm *HashBasedMAC) Type() MsgAuthCodeType {
-	return MsgAuthCodeTypeBlake3
+	return hbm.handlerType
 }
 
 func (hbm *HashBasedMAC) Sign(data []byte) (mac []byte) {
@@ -104,11 +115,11 @@ func (hbm *HashBasedMAC) Sign(data []byte) (mac []byte) {
 	// Create slice for the new MAC.
 	mac = make([]byte, 9+macSaltSize+hbm.signer.Size())
 
-	// Increment and add serial.
+	// Increment and add sequence number for replay protection.
 	sequence := hbm.seqChecker.NextOutSequence()
 	size := binary.PutUvarint(mac, sequence)
 
-	// Get random salt.
+	// Add random salt to prevent MAC reuse.
 	rand.Read(mac[size : size+macSaltSize])
 	size += macSaltSize
 
@@ -127,7 +138,7 @@ func (hbm *HashBasedMAC) Verify(data []byte, mac []byte) error {
 	defer hbm.verifyLock.Unlock()
 	defer hbm.verifier.Reset()
 
-	// Extract sequence. Note: Check _after_ signature!
+	// Extract sequence number (validated after MAC verification).
 	seqNum, seqSize := binary.Uvarint(mac)
 	if seqSize <= 0 {
 		return fmt.Errorf("%w: too short", ErrAuthCodeInvalid)
