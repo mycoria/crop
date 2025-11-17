@@ -120,7 +120,9 @@ func (hbm *HashBasedMAC) Sign(data []byte) (mac []byte) {
 	size := binary.PutUvarint(mac, sequence)
 
 	// Add random salt to prevent MAC reuse.
-	rand.Read(mac[size : size+macSaltSize])
+	if _, err := rand.Read(mac[size : size+macSaltSize]); err != nil {
+		panic("failed to generate random salt for MAC: " + err.Error())
+	}
 	size += macSaltSize
 
 	// Generate checksum.
