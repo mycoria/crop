@@ -1,0 +1,155 @@
+# golangci-lint configuration for CROP cryptographic library
+# Focus on security, correctness, and maintainability
+
+version: 2
+
+run:
+  timeout: 5m
+  go: '1.25'
+  tests: true
+
+linters:
+  enable:
+    # Critical Security & Correctness
+    - gosec           # Security-focused linter (critical for crypto code)
+    - errcheck        # Ensures errors aren't ignored
+    - govet           # Go's official checker for suspicious constructs
+    - staticcheck     # Comprehensive bug/performance/style checker
+    
+    # Bug Prevention
+    - ineffassign     # Detects ineffectual assignments
+    - unused          # Finds unused code
+    - nilnil          # Detects returning nil with nil errors
+    - nilerr          # Finds code returning nil even on error
+    - errchkjson      # Checks for unchecked errors in JSON encoding/decoding
+    - bodyclose       # Ensures HTTP response bodies are closed
+    - copyloopvar     # Detects loop variable capture issues (replaces exportloopref)
+    
+    # Code Quality & Maintainability
+    - gocyclo         # Cyclomatic complexity
+    - gocognit        # Cognitive complexity
+    - dupl            # Code duplication detection
+    - unconvert       # Unnecessary type conversions
+    - unparam         # Unused function parameters
+    - misspell        # Spelling mistakes
+    - revive          # Drop-in replacement for golint
+    - gocritic        # Opinionated linter with many checks
+
+  disable:
+    - godox           # TODOs are acceptable during development
+    - testpackage     # Can be too restrictive
+
+formatters:
+  enable:
+    - gofmt           # Standard Go formatting
+    - goimports       # Auto-manages imports and formats
+
+linters-settings:
+  gosec:
+    # G114: Use of net/http serve function that has no support for setting timeouts
+    # G404: Use of weak random number generator (crypto/rand)
+    excludes:
+      - G114  # HTTP servers not used in this library
+    severity: high
+  
+  errcheck:
+    # Check type assertions
+    check-type-assertions: true
+    # Check blank assignments
+    check-blank: true
+    # Ignore fmt.Print* functions
+    exclude-functions:
+      - (*github.com/mr-tron/base58.Encoder).Encode
+  
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment  # Struct field alignment is less critical
+      - shadow          # Variable shadowing can be intentional
+  
+  staticcheck:
+    checks: ["all"]
+  
+  gocyclo:
+    min-complexity: 15  # Reasonable for crypto code
+  
+  gocognit:
+    min-complexity: 20  # Allow moderate complexity
+  
+  dupl:
+    threshold: 100  # Minimum code duplication to report
+  
+  misspell:
+    locale: US
+  
+  revive:
+    enable-all-rules: false
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+        arguments:
+          - disableStutteringCheck
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+      - name: redefines-builtin-id
+  
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+    disabled-checks:
+      - unnamedResult  # Named returns can reduce clarity
+      - hugeParam      # Sometimes necessary for crypto structs
+
+issues:
+  # Maximum issues count per linter
+  max-issues-per-linter: 0
+  # Maximum issues count overall
+  max-same-issues: 0
+  
+  # Exclude specific issues or patterns
+  exclude-rules:
+    # Allow blank imports for side effects (crypto algorithm registration)
+    - path: hash\.go
+      linters:
+        - revive
+      text: "blank-imports"
+    
+    # Allow underscore in constant names for algorithm identifiers
+    - path: (hash|keypair|keymaker|key_exchange|challenge|mac)\.go
+      linters:
+        - revive
+      text: "var-naming.*should be"
+    
+    # Exclude test files from some checks
+    - path: _test\.go
+      linters:
+        - gosec
+        - dupl
+        - unparam
+    
+    # Allow long functions in test files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - gocognit
