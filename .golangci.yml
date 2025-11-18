@@ -74,7 +74,7 @@ linters:
     - sloglint        # Structured logging checks
 
   disable:
-    - godox           # TODOs are acceptable during development
+    - godox           # Cannot be configured to only flag FIXME (keywords setting not working in v2.6.2)
     - testpackage     # Can be too restrictive
     - exhaustruct     # Too strict - requires all struct fields to be initialized
     - wrapcheck       # Too strict - requires wrapping all external errors
@@ -171,3 +171,5 @@ issues:
     - text: "missing cases in switch of type"
       linters:
         - exhaustive
+    
+
