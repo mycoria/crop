@@ -27,6 +27,7 @@ const (
 
 // IsValid returns whether this MAC type is supported.
 func (act MsgAuthCodeType) IsValid() bool {
+	//nolint:exhaustive // Forward-compatible pattern with default case
 	switch act {
 	case MsgAuthCodeTypeHMACBlake3:
 		return true
@@ -120,9 +121,8 @@ func (hbm *HashBasedMAC) Sign(data []byte) (mac []byte) {
 	size := binary.PutUvarint(mac, sequence)
 
 	// Add random salt to prevent MAC reuse.
-	if _, err := rand.Read(mac[size : size+macSaltSize]); err != nil {
-		panic("failed to generate random salt for MAC: " + err.Error())
-	}
+	//nolint:errcheck,gosec // crypto/rand.Read cannot fail
+	rand.Read(mac[size : size+macSaltSize])
 	size += macSaltSize
 
 	// Generate checksum.

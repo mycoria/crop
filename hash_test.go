@@ -58,6 +58,7 @@ func TestHash_New_IsValid_AndDigestAgainstReference(t *testing.T) {
 	}
 
 	for _, a := range algos {
+		a := a
 		t.Run(a.name, func(t *testing.T) {
 			if !a.algo.IsValid() {
 				t.Fatalf("expected IsValid() true for %s", a.name)
@@ -113,6 +114,7 @@ func TestHash_Verify(t *testing.T) {
 	}
 
 	for _, algo := range algos {
+		algo := algo
 		t.Run(string(algo), func(t *testing.T) {
 			sum := algo.Digest(data)
 
@@ -153,6 +155,7 @@ func TestValueHasher_Sum_FormatAndDeterminism(t *testing.T) {
 	}
 
 	for _, algo := range algos {
+		algo := algo
 		t.Run(string(algo), func(t *testing.T) {
 			vh := NewValueHasher(algo)
 			for _, f := range fields {

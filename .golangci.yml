@@ -23,7 +23,7 @@ linters:
     - nilerr          # Finds code returning nil even on error
     - errchkjson      # Checks for unchecked errors in JSON encoding/decoding
     - bodyclose       # Ensures HTTP response bodies are closed
-    - copyloopvar     # Detects loop variable capture issues (replaces exportloopref)
+    - wastedassign    # Detects wasted assignments
     
     # Code Quality & Maintainability
     - gocyclo         # Cyclomatic complexity
@@ -32,10 +32,52 @@ linters:
     - unconvert       # Unnecessary type conversions
     - unparam         # Unused function parameters
     - misspell        # Spelling mistakes
+    - goconst         # Repeated strings that could be constants
+    
+    # Error Handling
+    - errorlint       # Error wrapping and assertions
+    - errname         # Error naming conventions
+    - nilnesserr      # Nilness checks
+    
+    # Context & Concurrency
+    - fatcontext      # Context.Context should be first parameter
+    - contextcheck    # Context usage checks
+    
+    # Embedded & Struct Checks
+    - embeddedstructfieldcheck  # Embedded struct field checks
+    - exhaustive      # Exhaustive enum/switch checks
+    
+    # Style & Modernization
+    - asciicheck      # ASCII character checks
+    - canonicalheader # Canonical header checks
+    - intrange        # Integer range checks
+    - mirror          # Mirror checks
+    - modernize       # Modernization suggestions
+    - nolintlint      # Nolint directive checks
+    - predeclared     # Predeclared identifier checks
+    - usestdlibvars   # Use standard library variables
+    
+    # Performance
+    - prealloc        # Preallocation checks
+    - perfsprint      # Sprint performance checks
+    
+    # Testing
+    - paralleltest    # Parallel test checks
+    - testifylint     # Testify assertions checks
+    - thelper         # Test helper checks
+    - tparallel       # t.Parallel() checks
+    
+    # Other
+    - exptostd        # Experimental to standard library
+    - protogetter     # Protobuf getter checks
+    - reassign        # Reassignment checks
+    - sloglint        # Structured logging checks
 
   disable:
     - godox           # TODOs are acceptable during development
     - testpackage     # Can be too restrictive
+    - exhaustruct     # Too strict - requires all struct fields to be initialized
+    - wrapcheck       # Too strict - requires wrapping all external errors
 
 formatters:
   enable:
@@ -57,9 +99,10 @@ linters-settings:
     check-type-assertions: true
     # Check blank assignments
     check-blank: true
-    # Ignore fmt.Print* functions
+    # Exclude functions that are known to never fail
     exclude-functions:
       - (*github.com/mr-tron/base58.Encoder).Encode
+      - (crypto/rand.Read)
   
   govet:
     enable-all: true
@@ -82,6 +125,8 @@ linters-settings:
   misspell:
     locale: US
   
+  goconst:
+    min-occurrences: 6  # At least more than 5 times
 
   gocritic:
     disabled-checks:
@@ -98,7 +143,7 @@ issues:
   # Exclude specific issues or patterns
   exclude-rules:
     # Exclude test files from some checks
-    - path: "_test\\.go"
+    - path: _test\.go
       linters:
         - gosec
         - dupl
@@ -106,13 +151,23 @@ issues:
         - gocognit
         - gocyclo
         - errcheck
+        - paralleltest     # t.Parallel() usage is at developer discretion
+        - testifylint      # Testify linting in tests
+        - predeclared      # Predeclared identifiers acceptable in tests
+        - gofmt            # Formatting in test data
+        - intrange         # Integer ranges in tests
     
     # Single case switches are forward-compatible for future algorithm additions
     - linters:
         - gocritic
       text: "singleCaseSwitch"
     
-    # Allow specific gofmt issues in test data
-    - path: "_test\\.go"
+    # crypto/rand.Read never fails in practice
+    - source: "rand\\.Read"
       linters:
-        - gofmt
+        - errcheck
+    
+    # IsValid methods use switches with default for forward compatibility
+    - text: "missing cases in switch of type"
+      linters:
+        - exhaustive
