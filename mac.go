@@ -21,14 +21,16 @@ const (
 	// MsgAuthCodeTypeBlake3 uses keyed BLAKE3.
 	MsgAuthCodeTypeBlake3 MsgAuthCodeType = "BLAKE3"
 
-	macMinSaltSize = 8
-	macSaltSize    = 16
+	macMinNonceSize = 8
+	macNonceSize    = 16
 )
 
 // IsValid returns whether this MAC type is supported.
 func (act MsgAuthCodeType) IsValid() bool {
 	switch act {
 	case MsgAuthCodeTypeHMACBlake3:
+		return true
+	case MsgAuthCodeTypeBlake3:
 		return true
 	}
 	return false
@@ -84,9 +86,9 @@ type MsgAuthCodeHandler interface {
 	// Type returns the MAC algorithm type.
 	Type() MsgAuthCodeType
 	// Sign generates an authentication code for the data.
-	Sign(data []byte) (mac []byte)
+	Sign(context string, data []byte) (mac []byte)
 	// Verify checks that the MAC is valid for the data.
-	Verify(data []byte, mac []byte) error
+	Verify(context string, data []byte, mac []byte) error
 	// Burn securely erases key material from memory.
 	Burn()
 }
@@ -107,56 +109,69 @@ func (hbm *HashBasedMAC) Type() MsgAuthCodeType {
 	return hbm.handlerType
 }
 
-func (hbm *HashBasedMAC) Sign(data []byte) (mac []byte) {
+func (hbm *HashBasedMAC) Sign(context string, data []byte) (mac []byte) {
 	hbm.signLock.Lock()
 	defer hbm.signLock.Unlock()
 	defer hbm.signer.Reset()
 
 	// Create slice for the new MAC.
-	mac = make([]byte, 9+macSaltSize+hbm.signer.Size())
+	mac = make([]byte, 9+macNonceSize+hbm.signer.Size())
+
+	// Create value hasher with signer.
+	vh := NewValueHasher(hbm.signer)
+	vh.AddString(context)
 
 	// Increment and add sequence number for replay protection.
 	sequence := hbm.seqChecker.NextOutSequence()
+	vh.AddUint(sequence)
 	size := binary.PutUvarint(mac, sequence)
 
-	// Add random salt to prevent MAC reuse.
-	rand.Read(mac[size : size+macSaltSize])
-	size += macSaltSize
+	// Add nonce to prevent MAC reuse.
+	//nolint:errcheck,gosec // crypto/rand.Read cannot fail
+	rand.Read(mac[size : size+macNonceSize])
+	vh.Add(mac[size : size+macNonceSize])
+	size += macNonceSize
 
-	// Generate checksum.
-	hbm.signer.Write(mac[:size])
-	hbm.signer.Write(data)
-	copy(mac[size:], hbm.signer.Sum(nil))
+	// Add data and generate checksum.
+	vh.Add(data)
+	vh.Sum(mac[size:])
 	size += hbm.signer.Size()
 
 	// Return full MAC without extra bytes.
 	return mac[:size]
 }
 
-func (hbm *HashBasedMAC) Verify(data []byte, mac []byte) error {
+func (hbm *HashBasedMAC) Verify(context string, data []byte, mac []byte) error {
 	hbm.verifyLock.Lock()
 	defer hbm.verifyLock.Unlock()
 	defer hbm.verifier.Reset()
+
+	// Create value hasher with verifier.
+	vh := NewValueHasher(hbm.verifier)
+	vh.AddString(context)
 
 	// Extract sequence number (validated after MAC verification).
 	seqNum, seqSize := binary.Uvarint(mac)
 	if seqSize <= 0 {
 		return fmt.Errorf("%w: too short", ErrAuthCodeInvalid)
 	}
+	vh.AddUint(seqNum)
 
-	// Check salt size.
-	saltSize := len(mac) - seqSize - hbm.verifier.Size()
-	if saltSize < macMinSaltSize {
+	// Check nonce size.
+	nonceSize := len(mac) - seqSize - hbm.verifier.Size()
+	if nonceSize < macMinNonceSize {
 		return fmt.Errorf("%w: too short", ErrAuthCodeInvalid)
 	}
+	vh.Add(mac[seqSize : seqSize+nonceSize])
 
 	// Generate checksum.
-	hbm.verifier.Write(mac[:seqSize+saltSize])
-	hbm.verifier.Write(data)
-	compareChecksum := hbm.verifier.Sum(nil)
+	vh.Add(data)
+	var compareChecksumBuf [64]byte
+	compareChecksum := compareChecksumBuf[:hbm.verifier.Size()]
+	vh.Sum(compareChecksum)
 
 	// Compare checksum.
-	if subtle.ConstantTimeCompare(mac[seqSize+saltSize:], compareChecksum) != 1 {
+	if subtle.ConstantTimeCompare(mac[seqSize+nonceSize:], compareChecksum) != 1 {
 		return ErrAuthCodeInvalid
 	}
 

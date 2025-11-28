@@ -1,0 +1,103 @@
+version: "2"
+run:
+  go: "1.25"
+  issues-exit-code: 1
+  tests: true
+linters:
+  enable:
+    # Critical Security & Correctness
+    - gosec # Security-focused linter (critical for crypto code)
+    - errcheck # Ensures errors aren't ignored
+    - govet # Go's official checker for suspicious constructs
+    - staticcheck # Comprehensive bug/performance/style checker
+
+    # Bug Prevention
+    - ineffassign # Detects ineffectual assignments
+    - unused # Finds unused code
+    - nilnil # Detects returning nil with nil errors
+    - nilerr # Finds code returning nil even on error
+    - errchkjson # Checks for unchecked errors in JSON encoding/decoding
+    - bodyclose # Ensures HTTP response bodies are closed
+    - wastedassign # Detects wasted assignments
+
+    # Code Quality & Maintainability
+    - gocyclo # Cyclomatic complexity
+    - gocognit # Cognitive complexity
+    - dupl # Code duplication detection
+    - unconvert # Unnecessary type conversions
+    - unparam # Unused function parameters
+    - misspell # Spelling mistakes
+    - goconst # Repeated strings that could be constants
+
+    # Error Handling
+    - errorlint # Error wrapping and assertions
+    - errname # Error naming conventions
+    - nilnesserr # Nilness checks
+
+    # Context & Concurrency
+    - fatcontext # Context.Context should be first parameter
+    - contextcheck # Context usage checks
+
+    # Embedded & Struct Checks
+    - embeddedstructfieldcheck # Embedded struct field checks
+    - exhaustive # Exhaustive enum/switch checks
+
+    # Style & Modernization
+    - asciicheck # ASCII character checks
+    - canonicalheader # Canonical header checks
+    - intrange # Integer range checks
+    - mirror # Mirror checks
+    - modernize # Modernization suggestions
+    - nolintlint # Nolint directive checks
+    - predeclared # Predeclared identifier checks
+    - usestdlibvars # Use standard library variables
+
+    # Performance
+    - prealloc # Preallocation checks
+    - perfsprint # Sprint performance checks
+
+    # Testing
+    - paralleltest # Parallel test checks
+    - testifylint # Testify assertions checks
+    - thelper # Test helper checks
+    - tparallel # t.Parallel() checks
+
+    # Other
+    - exptostd # Experimental to standard library
+    - protogetter # Protobuf getter checks
+    - reassign # Reassignment checks
+    - sloglint # Structured logging checks
+    - godox # Highlight FIXMEs
+
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+    godox:
+      keywords:
+        - FIXME
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/mycoria/crop
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

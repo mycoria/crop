@@ -77,8 +77,8 @@ func TestBlake3Keymaker_DeriveKeyInto_MinLength(t *testing.T) {
 	}
 
 	// Exactly min should succeed
-	min := make([]byte, keyMakerMinKeySize)
-	if err := km.DeriveKeyInto("", "", min); err != nil {
+	minBuf := make([]byte, keyMakerMinKeySize)
+	if err := km.DeriveKeyInto("", "", minBuf); err != nil {
 		t.Fatalf("DeriveKeyInto(min) error: %v", err)
 	}
 }

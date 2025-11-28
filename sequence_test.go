@@ -67,7 +67,7 @@ func TestStrictSequenceChecker_NextOutSequence_SequentialAndConcurrent(t *testin
 
 	workers := runtime.GOMAXPROCS(0)
 	per := N / workers
-	for w := 0; w < workers; w++ {
+	for w := range workers {
 		wg.Add(1)
 		count := per
 		// last worker picks up remainder

@@ -125,9 +125,9 @@ func (h Hash) Verify(data, checksum []byte) error {
 }
 
 // NewValueHasher creates a structured hasher for multiple values.
-func NewValueHasher(hash Hash) *ValueHasher {
+func NewValueHasher(h hash.Hash) *ValueHasher {
 	return &ValueHasher{
-		hasher: hash.New(),
+		hasher: h,
 	}
 }
 
@@ -176,18 +176,32 @@ func (vh *ValueHasher) AddString(data string) {
 	vh.Add([]byte(data))
 }
 
+// AddUint hashes an uint field.
+func (vh *ValueHasher) AddUint(n uint64) {
+	var buf [8]byte
+	b := buf[:]
+	binary.BigEndian.PutUint64(b, n)
+	vh.Add(b)
+}
+
 // Sum finalizes and returns the hash result.
-func (vh *ValueHasher) Sum() []byte {
-	// Write finisher.
+func (vh *ValueHasher) Sum(dst []byte) []byte {
+	// Create finisher.
 	finisher := [16]byte{
 		// Total field count.
 		0, 0, 0, 0,
 		0, 0, 0, 0,
-		// Max uint64 as the "field length".
+		// Use a max uint64 in the place of the "field length" of a next field as an otherwise impossible finalizer.
 		0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF,
 	}
 	binary.BigEndian.PutUint64(finisher[:8], vh.fieldCnt)
 
-	return vh.hasher.Sum(finisher[:])
+	// Write finisher.
+	_, err := vh.hasher.Write(finisher[:])
+	if err != nil {
+		panic(err)
+	}
+
+	return vh.hasher.Sum(dst)
 }

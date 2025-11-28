@@ -36,20 +36,20 @@ func TestAuthCode_SignVerify_Simple(t *testing.T) {
 
 			// Sign with A, verify with B.
 			msg1 := []byte("hello from A")
-			mac1 := a.Sign(msg1)
-			if err := b.Verify(msg1, mac1); err != nil {
+			mac1 := a.Sign("msg1", msg1)
+			if err := b.Verify("msg1", msg1, mac1); err != nil {
 				t.Fatalf("verify failed for A->B: %v (mac: %x)", err, mac1)
 			}
 
 			// Sign with B, verify with A.
 			msg2 := []byte("hello from B")
-			mac2 := b.Sign(msg2)
-			if err := a.Verify(msg2, mac2); err != nil {
+			mac2 := b.Sign("msg2", msg2)
+			if err := a.Verify("msg2", msg2, mac2); err != nil {
 				t.Fatalf("verify failed for B->A: %v (mac: %x)", err, mac2)
 			}
 
 			// Cross-check that wrong message fails.
-			if err := a.Verify([]byte("tampered"), mac2); err == nil {
+			if err := a.Verify("msg2", []byte("tampered"), mac2); err == nil {
 				t.Fatalf("expected verify to fail for tampered message but it succeeded")
 			}
 		})
@@ -95,14 +95,14 @@ func TestAuthCode_SignVerify_Randomized_BothDirections(t *testing.T) {
 			// Sign for A->B.
 			for i := 0; i < messages; i++ {
 				data := []byte("A-msg-" + strconv.Itoa(i))
-				mac := handlerA.Sign(data)
+				mac := handlerA.Sign("a-msg", data)
 				AtoB = append(AtoB, &entry{id: string(data), data: data, mac: mac})
 			}
 
 			// Sign for B->A.
 			for i := 0; i < messages; i++ {
 				data := []byte("B-msg-" + strconv.Itoa(i))
-				mac := handlerB.Sign(data)
+				mac := handlerB.Sign("b-msg", data)
 				BtoA = append(BtoA, &entry{id: string(data), data: data, mac: mac})
 			}
 
@@ -112,7 +112,7 @@ func TestAuthCode_SignVerify_Randomized_BothDirections(t *testing.T) {
 
 			// Verify for A->B.
 			for _, entry := range AtoB {
-				if err := handlerB.Verify(entry.data, entry.mac); err != nil {
+				if err := handlerB.Verify("a-msg", entry.data, entry.mac); err != nil {
 					t.Errorf("verify A->B failed at %s: %v", entry.id, err)
 				}
 				// fmt.Println(entry.id)
@@ -120,7 +120,7 @@ func TestAuthCode_SignVerify_Randomized_BothDirections(t *testing.T) {
 
 			// Verify for B->A.
 			for _, entry := range BtoA {
-				if err := handlerA.Verify(entry.data, entry.mac); err != nil {
+				if err := handlerA.Verify("b-msg", entry.data, entry.mac); err != nil {
 					t.Errorf("verify B->A failed at %s: %v", entry.id, err)
 				}
 				// fmt.Println(entry.id)
@@ -130,6 +130,8 @@ func TestAuthCode_SignVerify_Randomized_BothDirections(t *testing.T) {
 }
 
 func TestAuthCode_ErrorCases(t *testing.T) {
+	t.Parallel()
+
 	acts := []MsgAuthCodeType{
 		MsgAuthCodeTypeHMACBlake3,
 	}
@@ -157,7 +159,7 @@ func TestAuthCode_ErrorCases(t *testing.T) {
 			}
 
 			// 1) too short (no uvarint)
-			err = verifier.Verify([]byte("data"), []byte{})
+			err = verifier.Verify("", []byte("data"), []byte{})
 			if err == nil {
 				t.Fatalf("expected error for too short mac, got nil")
 			}
@@ -166,14 +168,14 @@ func TestAuthCode_ErrorCases(t *testing.T) {
 			}
 
 			// 2) serial violation: sign two messages and verify the newer one first on the same verifier
-			mac1 := signer.Sign([]byte("first"))
-			mac2 := signer.Sign([]byte("second"))
+			mac1 := signer.Sign("", []byte("first"))
+			mac2 := signer.Sign("", []byte("second"))
 			// verify second first -> ok
-			if err := verifier.Verify([]byte("second"), mac2); err != nil {
+			if err := verifier.Verify("", []byte("second"), mac2); err != nil {
 				t.Fatalf("unexpected verify error for second: %v", err)
 			}
 			// verify first next -> serial violation
-			err = verifier.Verify([]byte("first"), mac1)
+			err = verifier.Verify("", []byte("first"), mac1)
 			if err == nil {
 				t.Fatalf("expected serial violation error but got nil")
 			}
@@ -182,29 +184,29 @@ func TestAuthCode_ErrorCases(t *testing.T) {
 			}
 
 			// 3) salt too short: craft mac with too-small salt by truncating a valid mac
-			orig := signer.Sign([]byte("x"))
+			orig := signer.Sign("", []byte("x"))
 			_, serialSize := binary.Uvarint(orig)
 			if serialSize <= 0 {
 				t.Fatalf("failed to decode uvarint from mac")
 			}
 			// Determine hasher size based on the original mac and known macSaltSize
-			hasherSize := len(orig) - serialSize - macSaltSize
+			hasherSize := len(orig) - serialSize - macNonceSize
 			if hasherSize <= 0 {
 				t.Fatalf("unexpected hasher size computed: %d", hasherSize)
 			}
 			// Build truncated mac where saltSize = macMinSaltSize - 1 (too small)
-			newSaltSize := macMinSaltSize - 1
+			newSaltSize := macMinNonceSize - 1
 			newLen := serialSize + newSaltSize + hasherSize
 			if newLen >= len(orig) {
 				// unexpected, but ensure we still create a too-short-salt mac by truncating to something smaller
-				newLen = serialSize + (macMinSaltSize - 1) + hasherSize
+				newLen = serialSize + (macMinNonceSize - 1) + hasherSize
 			}
 			if newLen <= 0 || newLen > len(orig) {
 				t.Fatalf("unable to construct truncated mac for salt-too-short test")
 			}
 			trunc := make([]byte, newLen)
 			copy(trunc, orig[:newLen])
-			err = verifier.Verify([]byte("x"), trunc)
+			err = verifier.Verify("", []byte("x"), trunc)
 			if err == nil {
 				t.Fatalf("expected error for salt-too-short but got nil")
 			}
@@ -213,7 +215,7 @@ func TestAuthCode_ErrorCases(t *testing.T) {
 			}
 
 			// 4) checksum mismatch: tamper with the checksum bytes
-			valid := signer.Sign([]byte("payload"))
+			valid := signer.Sign("", []byte("payload"))
 			// flip a byte in the checksum area (the tail)
 			tampered := make([]byte, len(valid))
 			copy(tampered, valid)
@@ -221,7 +223,7 @@ func TestAuthCode_ErrorCases(t *testing.T) {
 				t.Fatalf("unexpected empty mac")
 			}
 			tampered[len(tampered)-1] ^= 0xFF
-			err = verifier.Verify([]byte("payload"), tampered)
+			err = verifier.Verify("", []byte("payload"), tampered)
 			if err == nil {
 				t.Fatalf("expected checksum mismatch to cause error but got nil")
 			}
@@ -230,8 +232,8 @@ func TestAuthCode_ErrorCases(t *testing.T) {
 			}
 
 			// 5) wrong message (data mismatch)
-			valid2 := signer.Sign([]byte("good"))
-			if err := verifier.Verify([]byte("bad"), valid2); err == nil {
+			valid2 := signer.Sign("", []byte("good"))
+			if err := verifier.Verify("", []byte("bad"), valid2); err == nil {
 				t.Fatalf("expected verification failure for wrong data but got nil")
 			}
 		})

@@ -58,7 +58,7 @@ func TestKeyPair(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			assert.EqualValues(t, privImportText, privImportBytes, "imports must match")
+			assert.Equal(t, privImportText, privImportBytes, "imports must match")
 			importedPriv, err := LoadKeyPair(privImportText)
 			if err != nil {
 				t.Fatal(err)
@@ -86,7 +86,7 @@ func TestKeyPair(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			assert.EqualValues(t, pubImportText, pubImportBytes, "imports must match")
+			assert.Equal(t, pubImportText, pubImportBytes, "imports must match")
 			importedpub, err := LoadKeyPair(pubImportText)
 			if err != nil {
 				t.Fatal(err)

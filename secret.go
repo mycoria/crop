@@ -13,6 +13,7 @@ func NewSecret(length int) []byte {
 
 	// Read random data into secret.
 	secret := make([]byte, length)
-	rand.Read(secret) // Cannot fail.
+	//nolint:errcheck,gosec // crypto/rand.Read cannot fail
+	rand.Read(secret)
 	return secret
 }

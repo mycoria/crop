@@ -13,7 +13,7 @@ const (
 	// KeyMakerTypeBlake3 derives keys using BLAKE3.
 	KeyMakerTypeBlake3 KeyMakerType = "BLAKE3"
 
-	keyMakerBaseContext = "nexufend key mkr"
+	keyMakerBaseContext = "_crop key maker_"
 
 	keyMakerMinKeySize = 16
 )
