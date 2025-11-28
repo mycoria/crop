@@ -5,84 +5,84 @@ version: 2
 
 run:
   timeout: 5m
-  go: '1.25'
+  go: "1.25"
   tests: true
 
 linters:
   enable:
     # Critical Security & Correctness
-    - gosec           # Security-focused linter (critical for crypto code)
-    - errcheck        # Ensures errors aren't ignored
-    - govet           # Go's official checker for suspicious constructs
-    - staticcheck     # Comprehensive bug/performance/style checker
-    
+    - gosec # Security-focused linter (critical for crypto code)
+    - errcheck # Ensures errors aren't ignored
+    - govet # Go's official checker for suspicious constructs
+    - staticcheck # Comprehensive bug/performance/style checker
+
     # Bug Prevention
-    - ineffassign     # Detects ineffectual assignments
-    - unused          # Finds unused code
-    - nilnil          # Detects returning nil with nil errors
-    - nilerr          # Finds code returning nil even on error
-    - errchkjson      # Checks for unchecked errors in JSON encoding/decoding
-    - bodyclose       # Ensures HTTP response bodies are closed
-    - wastedassign    # Detects wasted assignments
-    
+    - ineffassign # Detects ineffectual assignments
+    - unused # Finds unused code
+    - nilnil # Detects returning nil with nil errors
+    - nilerr # Finds code returning nil even on error
+    - errchkjson # Checks for unchecked errors in JSON encoding/decoding
+    - bodyclose # Ensures HTTP response bodies are closed
+    - wastedassign # Detects wasted assignments
+
     # Code Quality & Maintainability
-    - gocyclo         # Cyclomatic complexity
-    - gocognit        # Cognitive complexity
-    - dupl            # Code duplication detection
-    - unconvert       # Unnecessary type conversions
-    - unparam         # Unused function parameters
-    - misspell        # Spelling mistakes
-    - goconst         # Repeated strings that could be constants
-    
+    - gocyclo # Cyclomatic complexity
+    - gocognit # Cognitive complexity
+    - dupl # Code duplication detection
+    - unconvert # Unnecessary type conversions
+    - unparam # Unused function parameters
+    - misspell # Spelling mistakes
+    - goconst # Repeated strings that could be constants
+
     # Error Handling
-    - errorlint       # Error wrapping and assertions
-    - errname         # Error naming conventions
-    - nilnesserr      # Nilness checks
-    
+    - errorlint # Error wrapping and assertions
+    - errname # Error naming conventions
+    - nilnesserr # Nilness checks
+
     # Context & Concurrency
-    - fatcontext      # Context.Context should be first parameter
-    - contextcheck    # Context usage checks
-    
+    - fatcontext # Context.Context should be first parameter
+    - contextcheck # Context usage checks
+
     # Embedded & Struct Checks
-    - embeddedstructfieldcheck  # Embedded struct field checks
-    - exhaustive      # Exhaustive enum/switch checks
-    
+    - embeddedstructfieldcheck # Embedded struct field checks
+    - exhaustive # Exhaustive enum/switch checks
+
     # Style & Modernization
-    - asciicheck      # ASCII character checks
+    - asciicheck # ASCII character checks
     - canonicalheader # Canonical header checks
-    - intrange        # Integer range checks
-    - mirror          # Mirror checks
-    - modernize       # Modernization suggestions
-    - nolintlint      # Nolint directive checks
-    - predeclared     # Predeclared identifier checks
-    - usestdlibvars   # Use standard library variables
-    
+    - intrange # Integer range checks
+    - mirror # Mirror checks
+    - modernize # Modernization suggestions
+    - nolintlint # Nolint directive checks
+    - predeclared # Predeclared identifier checks
+    - usestdlibvars # Use standard library variables
+
     # Performance
-    - prealloc        # Preallocation checks
-    - perfsprint      # Sprint performance checks
-    
+    - prealloc # Preallocation checks
+    - perfsprint # Sprint performance checks
+
     # Testing
-    - paralleltest    # Parallel test checks
-    - testifylint     # Testify assertions checks
-    - thelper         # Test helper checks
-    - tparallel       # t.Parallel() checks
-    
+    - paralleltest # Parallel test checks
+    - testifylint # Testify assertions checks
+    - thelper # Test helper checks
+    - tparallel # t.Parallel() checks
+
     # Other
-    - exptostd        # Experimental to standard library
-    - protogetter     # Protobuf getter checks
-    - reassign        # Reassignment checks
-    - sloglint        # Structured logging checks
+    - exptostd # Experimental to standard library
+    - protogetter # Protobuf getter checks
+    - reassign # Reassignment checks
+    - sloglint # Structured logging checks
 
   disable:
-    - godox           # Cannot be configured to only flag FIXME (keywords setting not working in v2.6.2)
-    - testpackage     # Can be too restrictive
-    - exhaustruct     # Too strict - requires all struct fields to be initialized
-    - wrapcheck       # Too strict - requires wrapping all external errors
+    - godox # Cannot be configured to only flag FIXME (keywords setting not working in v2.6.2)
+    - testpackage # Can be too restrictive
+    - exhaustruct # Too strict - requires all struct fields to be initialized
+    - wrapcheck # Too strict - requires wrapping all external errors
 
 formatters:
   enable:
-    - gofmt           # Standard Go formatting
-    - goimports       # Auto-manages imports and formats
+    - gofmt # Standard Go formatting
+    - goimports # Auto-manages imports and formats
 
 linters-settings:
   gosec:
@@ -90,10 +90,10 @@ linters-settings:
     # G115: Integer overflow conversion
     # G404: Use of weak random number generator (crypto/rand)
     excludes:
-      - G114  # HTTP servers not used in this library
-      - G115  # Integer overflow conversions are safe in controlled contexts
+      - G114 # HTTP servers not used in this library
+      - G115 # Integer overflow conversions are safe in controlled contexts
     severity: high
-  
+
   errcheck:
     # Check type assertions
     check-type-assertions: true
@@ -103,43 +103,43 @@ linters-settings:
     exclude-functions:
       - (*github.com/mr-tron/base58.Encoder).Encode
       - (crypto/rand.Read)
-  
+
   govet:
     enable-all: true
     disable:
-      - fieldalignment  # Struct field alignment is less critical
-      - shadow          # Variable shadowing can be intentional
-  
+      - fieldalignment # Struct field alignment is less critical
+      - shadow # Variable shadowing can be intentional
+
   staticcheck:
     checks: ["all"]
-  
+
   gocyclo:
-    min-complexity: 15  # Reasonable for crypto code
-  
+    min-complexity: 30 # Reasonable for crypto code
+
   gocognit:
-    min-complexity: 30  # Allow moderate complexity (higher for tests)
-  
+    min-complexity: 60 # Allow moderate complexity (higher for tests)
+
   dupl:
-    threshold: 100  # Minimum code duplication to report
-  
+    threshold: 200 # Minimum code duplication to report
+
   misspell:
     locale: US
-  
+
   goconst:
-    min-occurrences: 6  # At least more than 5 times
+    min-occurrences: 6 # At least more than 5 times
 
   gocritic:
     disabled-checks:
-      - unnamedResult     # Named returns can reduce clarity
-      - hugeParam         # Sometimes necessary for crypto structs
-      - singleCaseSwitch  # Single case switches with default are forward-compatible
+      - unnamedResult # Named returns can reduce clarity
+      - hugeParam # Sometimes necessary for crypto structs
+      - singleCaseSwitch # Single case switches with default are forward-compatible
 
 issues:
   # Maximum issues count per linter
   max-issues-per-linter: 0
   # Maximum issues count overall
   max-same-issues: 0
-  
+
   # Exclude specific issues or patterns
   exclude-rules:
     # Exclude test files from some checks
@@ -151,25 +151,23 @@ issues:
         - gocognit
         - gocyclo
         - errcheck
-        - paralleltest     # t.Parallel() usage is at developer discretion
-        - testifylint      # Testify linting in tests
-        - predeclared      # Predeclared identifiers acceptable in tests
-        - gofmt            # Formatting in test data
-        - intrange         # Integer ranges in tests
-    
+        - paralleltest # t.Parallel() usage is at developer discretion
+        - testifylint # Testify linting in tests
+        - predeclared # Predeclared identifiers acceptable in tests
+        - gofmt # Formatting in test data
+        - intrange # Integer ranges in tests
+
     # Single case switches are forward-compatible for future algorithm additions
     - linters:
         - gocritic
       text: "singleCaseSwitch"
-    
+
     # crypto/rand.Read never fails in practice
     - source: "rand\\.Read"
       linters:
         - errcheck
-    
+
     # IsValid methods use switches with default for forward compatibility
     - text: "missing cases in switch of type"
       linters:
         - exhaustive
-    
-

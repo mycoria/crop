@@ -244,13 +244,13 @@ func TestHashedContextChallenge_ResponseMatchesIndependentComputation(t *testing
 
 	// Independent recomputation matching the requester's expected order:
 	// fixed string, purpose, requester, responder, challenge.
-	vh := NewValueHasher(BLAKE3)
+	vh := NewValueHasher(BLAKE3.New())
 	vh.AddString("hashed context challenge")
 	vh.AddString(purpose)
 	vh.AddString(reqCtx)
 	vh.AddString(resCtx)
 	vh.Add(chal)
-	resp2 := vh.Sum()
+	resp2 := vh.Sum(nil)
 
 	if !bytes.Equal(resp1, resp2) {
 		t.Fatalf("independent computation mismatch\n got: %x\nwant: %x", resp1, resp2)

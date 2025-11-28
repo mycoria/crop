@@ -157,11 +157,11 @@ func TestValueHasher_Sum_FormatAndDeterminism(t *testing.T) {
 	for _, algo := range algos {
 		algo := algo
 		t.Run(string(algo), func(t *testing.T) {
-			vh := NewValueHasher(algo)
+			vh := NewValueHasher(algo.New())
 			for _, f := range fields {
 				vh.Add(f)
 			}
-			sum := vh.Sum()
+			sum := vh.Sum(nil)
 
 			hasher := algo.New()
 			if hasher == nil {
@@ -198,11 +198,11 @@ func TestValueHasher_Sum_FormatAndDeterminism(t *testing.T) {
 			}
 
 			// Determinism: re-run and expect the same output.
-			vh2 := NewValueHasher(algo)
+			vh2 := NewValueHasher(algo.New())
 			for _, f := range fields {
 				vh2.Add(f)
 			}
-			sum2 := vh2.Sum()
+			sum2 := vh2.Sum(nil)
 			if !bytes.Equal(sum, sum2) {
 				t.Fatalf("non-deterministic result for ValueHasher\n1: %x\n2: %x", sum, sum2)
 			}
@@ -213,15 +213,15 @@ func TestValueHasher_Sum_FormatAndDeterminism(t *testing.T) {
 func TestValueHasher_AddString(t *testing.T) {
 	algo := SHA2_256
 
-	vh1 := NewValueHasher(algo)
+	vh1 := NewValueHasher(algo.New())
 	vh1.Add([]byte("hello"))
 	vh1.Add([]byte("world"))
 
-	vh2 := NewValueHasher(algo)
+	vh2 := NewValueHasher(algo.New())
 	vh2.AddString("hello")
 	vh2.AddString("world")
 
-	if got1, got2 := vh1.Sum(), vh2.Sum(); !bytes.Equal(got1, got2) {
+	if got1, got2 := vh1.Sum(nil), vh2.Sum(nil); !bytes.Equal(got1, got2) {
 		t.Fatalf("AddString mismatch with Add\nAdd:       %x\nAddString: %x", got1, got2)
 	}
 }
@@ -229,15 +229,15 @@ func TestValueHasher_AddString(t *testing.T) {
 func TestValueHasher_OrderMatters(t *testing.T) {
 	algo := BLAKE2b_256
 
-	vh1 := NewValueHasher(algo)
+	vh1 := NewValueHasher(algo.New())
 	vh1.Add([]byte("first"))
 	vh1.Add([]byte("second"))
 
-	vh2 := NewValueHasher(algo)
+	vh2 := NewValueHasher(algo.New())
 	vh2.Add([]byte("second"))
 	vh2.Add([]byte("first"))
 
-	if bytes.Equal(vh1.Sum(), vh2.Sum()) {
+	if bytes.Equal(vh1.Sum(nil), vh2.Sum(nil)) {
 		t.Fatalf("expected different sums when field order differs")
 	}
 }
@@ -249,7 +249,7 @@ func TestNewValueHasher_WithInvalidAlgo_PanicsOnUse(t *testing.T) {
 		}
 	}()
 	var invalid Hash = "NOPE"
-	vh := NewValueHasher(invalid)
+	vh := NewValueHasher(invalid.New())
 	// Should panic on first write due to nil hasher
 	vh.Add([]byte("data"))
 }
@@ -279,9 +279,9 @@ func preview(b []byte) string {
 	if len(b) == 0 {
 		return ""
 	}
-	const max = 32
-	if len(b) <= max {
+	const maxLen = 32
+	if len(b) <= maxLen {
 		return string(b)
 	}
-	return string(b[:max]) + "..."
+	return string(b[:maxLen]) + "..."
 }

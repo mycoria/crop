@@ -96,7 +96,7 @@ func (hcc *HashedContextChallenge) MakeResponse(challenge []byte) (response []by
 }
 
 func (hcc *HashedContextChallenge) makeHash(input []byte, reverse bool) []byte {
-	vh := NewValueHasher(hcc.hash)
+	vh := NewValueHasher(hcc.hash.New())
 
 	vh.AddString("hashed context challenge") // Fixed internal value.
 	vh.AddString(hcc.purpose)                // Add purpose.
@@ -111,5 +111,5 @@ func (hcc *HashedContextChallenge) makeHash(input []byte, reverse bool) []byte {
 	}
 	vh.Add(input)
 
-	return vh.Sum()
+	return vh.Sum(nil)
 }
